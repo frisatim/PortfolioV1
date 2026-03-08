@@ -4,11 +4,10 @@ import Globe from 'react-globe.gl';
 import { feature } from 'topojson-client';
 import { X } from 'lucide-react';
 import useScrollProgress from '../../hooks/useScrollProgress';
+import useGlobeSocket from '../../hooks/useGlobeSocket';
 
 // ── Configuration ─────────────────────────────────
 const TOPO_URL = 'https://unpkg.com/world-atlas@2/countries-110m.json';
-const STORAGE_KEY = 'globe-guestbook-markers';
-const MAX_MARKERS = 100;
 const CLICK_COOLDOWN = 400;
 
 const COLORS = {
@@ -17,12 +16,9 @@ const COLORS = {
   countryBorder: 'rgba(56, 189, 248, 0.15)',
   countryBorderFocus: 'rgba(56, 189, 248, 0.25)',
   marker: '#ffb04f',
-  markerNew: '#ffffff',
+  markerOwn: '#ffffff',
   atmosphere: '#38BDF8',
 };
-
-// Spring transition for the globe resize
-const GLOBE_SPRING = { type: 'spring', stiffness: 90, damping: 18, mass: 0.8 };
 
 const WorldMapHero = () => {
   const globeRef = useRef();
@@ -30,11 +26,12 @@ const WorldMapHero = () => {
   const sectionRef = useRef();
 
   const [countries, setCountries] = useState({ features: [] });
-  const [markers, setMarkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const [focusMode, setFocusMode] = useState(false);
   const { scrollY } = useScrollProgress();
+
+  const { markersArray, markerCount, isConnected, placeMarker, userUUID } = useGlobeSocket();
 
   // ── Load GeoJSON ────────────────────────────────
   useEffect(() => {
@@ -46,20 +43,6 @@ const WorldMapHero = () => {
       })
       .catch(() => setLoading(false));
   }, []);
-
-  // ── Load / persist markers (localStorage) ───────
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setMarkers(JSON.parse(saved));
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    if (markers.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(markers));
-    }
-  }, [markers]);
 
   // ── Responsive sizing ───────────────────────────
   useEffect(() => {
@@ -127,18 +110,13 @@ const WorldMapHero = () => {
   }, []);
 
   // ── Place a marker at given coords ─────────────
-  const placeMarker = useCallback((lat, lng) => {
+  const handlePlaceMarker = useCallback((lat, lng) => {
     if (lat == null || lng == null) return;
     const now = Date.now();
     if (now - lastClickTime.current < CLICK_COOLDOWN) return;
     lastClickTime.current = now;
-
-    const marker = { id: `m-${now}`, lat, lng, ts: now };
-    setMarkers((prev) => {
-      const next = [...prev, marker];
-      return next.length > MAX_MARKERS ? next.slice(-MAX_MARKERS) : next;
-    });
-  }, []);
+    placeMarker(lat, lng);
+  }, [placeMarker]);
 
   // ── Globe click (ocean): mode-aware ───────────
   const handleGlobeClick = useCallback(({ lat, lng }) => {
@@ -146,24 +124,22 @@ const WorldMapHero = () => {
       enterFocus();
       return;
     }
-    placeMarker(lat, lng);
-  }, [focusMode, enterFocus, placeMarker]);
+    handlePlaceMarker(lat, lng);
+  }, [focusMode, enterFocus, handlePlaceMarker]);
 
   // ── Polygon click (countries): mode-aware ─────
-  // onPolygonClick signature: (polygon, event, { lat, lng, altitude })
   const handlePolygonClick = useCallback((_polygon, _event, coords) => {
     if (!focusMode) {
       enterFocus();
       return;
     }
-    placeMarker(coords.lat, coords.lng);
-  }, [focusMode, enterFocus, placeMarker]);
+    handlePlaceMarker(coords.lat, coords.lng);
+  }, [focusMode, enterFocus, handlePlaceMarker]);
 
   // ── Derived values ──────────────────────────────
   const heroOpacity = focusMode ? 0 : Math.max(0, 1 - scrollY / 500);
   const heroTranslate = focusMode ? -40 : scrollY * 0.3;
 
-  // Globe always fills the container — no CSS scale transforms
   const globeW = dims.w;
   const globeH = dims.h;
 
@@ -183,7 +159,7 @@ const WorldMapHero = () => {
         )}
       </AnimatePresence>
 
-      {/* ─── Globe container — no CSS transforms to avoid raycasting offset ── */}
+      {/* ─── Globe container ── */}
       {!loading && dims.w > 0 && (
         <div
           aria-hidden="true"
@@ -198,7 +174,6 @@ const WorldMapHero = () => {
             width={globeW}
             height={globeH}
             backgroundColor="rgba(0,0,0,0)"
-            // Country polygons
             polygonsData={countries.features}
             polygonCapColor={() => COLORS.countrySurface}
             polygonSideColor={() => COLORS.countrySide}
@@ -206,19 +181,16 @@ const WorldMapHero = () => {
               focusMode ? COLORS.countryBorderFocus : COLORS.countryBorder
             }
             polygonAltitude={0.008}
-            // Markers
-            pointsData={markers}
+            pointsData={markersArray}
             pointLat="lat"
             pointLng="lng"
             pointColor={(d) =>
-              Date.now() - d.ts < 1000 ? COLORS.markerNew : COLORS.marker
+              d.uuid === userUUID ? COLORS.markerOwn : COLORS.marker
             }
             pointAltitude={0.02}
-            pointRadius={(d) => (Date.now() - d.ts < 1000 ? 0.7 : 0.45)}
-            // Atmosphere — brighter in focus
+            pointRadius={(d) => (d.uuid === userUUID ? 0.7 : 0.45)}
             atmosphereColor={COLORS.atmosphere}
             atmosphereAltitude={focusMode ? 0.2 : 0.12}
-            // Interaction — onGlobeClick fires on oceans, onPolygonClick on countries
             onGlobeClick={handleGlobeClick}
             onPolygonClick={handlePolygonClick}
           />
@@ -335,31 +307,31 @@ const WorldMapHero = () => {
         )}
       </AnimatePresence>
 
-      {/* ─── Visitor counter (visible when > 0) ──── */}
-      <AnimatePresence>
-        {markers.length > 0 && (
-          <motion.div
-            className="z-50"
-            style={{ position: focusMode ? 'fixed' : 'absolute' }}
-            initial={{ opacity: 0 }}
-            animate={{
-              opacity: 1,
-              bottom: focusMode ? 24 : 32,
-              left: focusMode ? 24 : 24,
-              scale: focusMode ? 0.9 : 1,
-            }}
-            exit={{ opacity: 0 }}
-            transition={{ delay: focusMode ? 0 : 1.2, duration: 0.4 }}
-          >
-            <div className="bg-base-900/60 backdrop-blur-sm border border-accent-400/15 px-5 py-3">
-              <p className="font-mono text-xs text-text-500">
-                <span className="text-xl font-bold text-accent-400 block">{markers.length}</span>
-                visitor{markers.length !== 1 ? 's' : ''} marked
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ─── Visitor counter + connection indicator ──── */}
+      <motion.div
+        className="z-50"
+        style={{ position: focusMode ? 'fixed' : 'absolute' }}
+        initial={{ opacity: 0 }}
+        animate={{
+          opacity: 1,
+          bottom: focusMode ? 24 : 32,
+          left: focusMode ? 24 : 24,
+          scale: focusMode ? 0.9 : 1,
+        }}
+        transition={{ delay: focusMode ? 0 : 1.2, duration: 0.4 }}
+      >
+        <div className="bg-base-900/60 backdrop-blur-sm border border-accent-400/15 px-5 py-3">
+          <p className="font-mono text-xs text-text-500">
+            <span className="text-xl font-bold text-accent-400 block">{markerCount}</span>
+            visitor{markerCount !== 1 ? 's' : ''} marked
+          </p>
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full mt-1.5"
+            style={{ backgroundColor: isConnected ? '#4ade80' : '#6b7280' }}
+            title={isConnected ? 'Live' : 'Offline'}
+          />
+        </div>
+      </motion.div>
 
       {/* ─── Normal mode: bottom bar ───────────── */}
       <AnimatePresence>

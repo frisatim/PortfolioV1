@@ -15,6 +15,8 @@ export default defineConfig({
           globe: ['react-globe.gl', 'topojson-client'],
           // Isolate animation lib
           motion: ['framer-motion'],
+          // Socket.io client
+          socket: ['socket.io-client'],
           // Router + icons
           vendor: ['react-router-dom', 'lucide-react'],
         },
