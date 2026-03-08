@@ -29,3 +29,6 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+# Local agent tooling settings
+.claude/settings.local.json
