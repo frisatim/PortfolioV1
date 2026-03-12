@@ -31,7 +31,6 @@ export const projects = [
     techStack: ["Python", "TensorFlow", "CNN", "Computer Vision", "Medical AI"],
     githubLink: null,
     demoLink: null,
-    status: "In Progress",
     featured: true,
   },
   {

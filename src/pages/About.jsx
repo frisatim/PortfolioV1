@@ -1,7 +1,7 @@
 import PageTransition from '../components/layout/PageTransition';
 import Section from '../components/common/Section';
 import RevealOnScroll from '../components/animations/RevealOnScroll';
-import { experience, skills } from '../data/experience';
+import { workExperience, education, skills } from '../data/experience';
 
 const About = () => (
   <PageTransition>
@@ -20,7 +20,7 @@ const About = () => (
             Engineering student specializing in Network and Communications at the University of Technology of Troyes (UTT), currently interning at the LIST3N research lab — working at the intersection of network analysis and artificial intelligence.
           </p>
           <p className="text-lg text-text-300 leading-relaxed mb-6">
-            My academic journey has taken me across three continents — studying in France, China (Shanghai University, 2nd place at Innovation Bootcamp), and South Korea (UNIST) — giving me a global perspective and adaptability.
+            My academic journey has taken me across three continents — studying in France, China (Shanghai University — Best ROI & Best Speech awards at Innovation Bootcamp), and South Korea (UNIST) — giving me a global perspective and adaptability.
           </p>
           <p className="text-lg text-text-300 leading-relaxed">
             Beyond academics, I tutor international students in French and pursue interests in volleyball, badminton, entrepreneurship, and astronomy.
@@ -29,20 +29,42 @@ const About = () => (
       </RevealOnScroll>
     </Section>
 
-    {/* Timeline */}
+    {/* Work Experience */}
     <Section className="border-t border-accent-400/10">
       <RevealOnScroll>
-        <p className="text-xs uppercase tracking-[0.15em] text-accent-400 font-mono mb-3">Journey</p>
-        <h2 className="text-3xl font-display font-semibold text-text-100 mb-14">Experience &amp; Education</h2>
+        <p className="text-xs uppercase tracking-[0.15em] text-accent-400 font-mono mb-3">Work</p>
+        <h2 className="text-3xl font-display font-semibold text-text-100 mb-14">Work Experience</h2>
       </RevealOnScroll>
 
       <div className="relative pl-8 border-l-2 border-accent-400/20 max-w-3xl">
-        {experience.map((item, i) => (
+        {workExperience.map((item, i) => (
           <RevealOnScroll key={i} delay={i * 0.08}>
             <div className="mb-12 last:mb-0 relative">
-              {/* Dot on timeline */}
               <div className="absolute -left-[calc(2rem+5px)] top-1.5 w-3 h-3 rounded-full border-2 border-accent-400 bg-base-950" />
+              <p className="text-sm font-mono font-bold text-accent-400 mb-1">{item.year}</p>
+              <h3 className="text-lg font-display font-semibold text-text-100 mb-1">{item.title}</h3>
+              <p className="text-sm text-text-500 mb-2">
+                {item.org} &mdash; {item.location}
+              </p>
+              <p className="text-sm text-text-300 leading-relaxed">{item.description}</p>
+            </div>
+          </RevealOnScroll>
+        ))}
+      </div>
+    </Section>
 
+    {/* Education */}
+    <Section className="border-t border-accent-400/10">
+      <RevealOnScroll>
+        <p className="text-xs uppercase tracking-[0.15em] text-accent-400 font-mono mb-3">Education</p>
+        <h2 className="text-3xl font-display font-semibold text-text-100 mb-14">Education</h2>
+      </RevealOnScroll>
+
+      <div className="relative pl-8 border-l-2 border-accent-400/20 max-w-3xl">
+        {education.map((item, i) => (
+          <RevealOnScroll key={i} delay={i * 0.08}>
+            <div className="mb-12 last:mb-0 relative">
+              <div className="absolute -left-[calc(2rem+5px)] top-1.5 w-3 h-3 rounded-full border-2 border-accent-400 bg-base-950" />
               <p className="text-sm font-mono font-bold text-accent-400 mb-1">{item.year}</p>
               <h3 className="text-lg font-display font-semibold text-text-100 mb-1">{item.title}</h3>
               <p className="text-sm text-text-500 mb-2">
@@ -62,7 +84,7 @@ const About = () => (
         <h2 className="text-3xl font-display font-semibold text-text-100 mb-14">Skills &amp; Tools</h2>
       </RevealOnScroll>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-4xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-5xl">
         {Object.entries(skills).map(([category, items], ci) => (
           <RevealOnScroll key={category} delay={ci * 0.1}>
             <div>
