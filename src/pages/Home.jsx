@@ -7,9 +7,14 @@ import FeaturedWork from '../components/home/FeaturedWork';
 import Section from '../components/common/Section';
 import Button from '../components/common/Button';
 import RevealOnScroll from '../components/animations/RevealOnScroll';
+import useResponsiveView from '../hooks/useResponsiveView';
 
-// Globe loads lazily — hero text renders instantly as LCP
+// Conditional lazy loading:
+// - Desktop (≥768px) → loads Three.js + react-globe.gl bundle
+// - Mobile  (<768px) → loads lightweight SVG map (zero 3D deps)
+// Each chunk is only downloaded when needed.
 const WorldMapHero = lazy(() => import('../components/home/WorldMapHero'));
+const MobileMapView = lazy(() => import('../components/home/MobileMapView'));
 
 // Fallback shows the hero text immediately so FCP/LCP are fast
 const GlobeFallback = () => (
@@ -38,38 +43,41 @@ const GlobeFallback = () => (
     >
       Engineering Student — Cybersecurity • AI • DevOps
     </motion.p>
-    {/* Subtle loading indicator at the bottom */}
     <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
       <div className="w-1.5 h-1.5 rounded-full bg-accent-400 animate-pulse" />
     </div>
   </section>
 );
 
-const Home = () => (
-  <PageTransition>
-    <Suspense fallback={<GlobeFallback />}>
-      <WorldMapHero />
-    </Suspense>
-    <IntroSection />
-    <FeaturedWork />
+const Home = () => {
+  const view = useResponsiveView(768);
 
-    {/* CTA */}
-    <Section className="border-t border-accent-400/10">
-      <RevealOnScroll>
-        <div className="text-center">
-          <h2 className="text-3xl md:text-5xl font-display font-semibold text-text-100 mb-4">
-            Ready to start a project?
-          </h2>
-          <p className="text-text-300 mb-8 max-w-lg mx-auto">
-            Whether it's AI, security, or cloud — let's build something together.
-          </p>
-          <Button href="/contact" variant="primary">
-            Get in Touch <ArrowRight size={16} />
-          </Button>
-        </div>
-      </RevealOnScroll>
-    </Section>
-  </PageTransition>
-);
+  return (
+    <PageTransition>
+      <Suspense fallback={<GlobeFallback />}>
+        {view === 'globe' ? <WorldMapHero /> : <MobileMapView />}
+      </Suspense>
+      <IntroSection />
+      <FeaturedWork />
+
+      {/* CTA */}
+      <Section className="border-t border-accent-400/10">
+        <RevealOnScroll>
+          <div className="text-center">
+            <h2 className="text-3xl md:text-5xl font-display font-semibold text-text-100 mb-4">
+              Ready to start a project?
+            </h2>
+            <p className="text-text-300 mb-8 max-w-lg mx-auto">
+              Whether it's AI, security, or cloud — let's build something together.
+            </p>
+            <Button href="/contact" variant="primary">
+              Get in Touch <ArrowRight size={16} />
+            </Button>
+          </div>
+        </RevealOnScroll>
+      </Section>
+    </PageTransition>
+  );
+};
 
 export default Home;

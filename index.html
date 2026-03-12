@@ -20,9 +20,15 @@
     </noscript>
     <!-- Inline critical above-fold styles for instant FCP -->
     <style>
-      body { margin: 0; background: #050A0E; color: #CBD5E1; font-family: system-ui, sans-serif; }
+      body { margin: 0; font-family: system-ui, sans-serif; }
+      body { background: #F8F9FA; color: #374151; }
+      html[data-theme="dark"] body { background: #050A0E; color: #CBD5E1; }
       #root { min-height: 100vh; }
     </style>
+    <!-- Prevent theme flash: apply saved theme before paint -->
+    <script>
+      (function(){var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t)})();
+    </script>
   </head>
   <body>
     <div id="root"></div>

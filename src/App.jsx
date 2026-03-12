@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, MotionConfig } from 'framer-motion';
+import { ThemeProvider } from './context/ThemeContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 
@@ -36,6 +37,7 @@ function AnimatedRoutes() {
 
 function App() {
   return (
+    <ThemeProvider>
     <MotionConfig reducedMotion="user">
       <BrowserRouter>
         <div className="min-h-screen bg-base-950 text-text-300">
@@ -54,6 +56,7 @@ function App() {
         </div>
       </BrowserRouter>
     </MotionConfig>
+    </ThemeProvider>
   );
 }
 

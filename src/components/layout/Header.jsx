@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useScrollProgress from '../../hooks/useScrollProgress';
+import ThemeToggle from './ThemeToggle';
 
 const navItems = [
   { label: 'Work', path: '/work' },
@@ -89,18 +90,22 @@ const Header = () => {
               {label}
             </Link>
           ))}
+          <ThemeToggle />
         </div>
 
-        {/* Mobile hamburger */}
-        <button
-          ref={toggleRef}
-          className="md:hidden text-text-300 hover:text-accent-400 transition-colors cursor-pointer"
+        {/* Mobile: toggle + hamburger */}
+        <div className="md:hidden flex items-center gap-3">
+          <ThemeToggle />
+          <button
+            ref={toggleRef}
+            className="text-text-300 hover:text-accent-400 transition-colors cursor-pointer"
           onClick={toggle}
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileOpen}
         >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </nav>
 
       {/* Mobile menu */}
