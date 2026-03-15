@@ -328,140 +328,153 @@ const MobileMapView = () => {
   );
 
   return (
-    <section className="relative w-full h-screen overflow-hidden" style={{ background: C.ocean }}>
-      {/* ─── Full-screen map background ──────────── */}
-      {loading ? (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <motion.div
-            className="w-2 h-2 rounded-full bg-accent-400"
-            animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          />
-        </div>
-      ) : (
-        <svg
-          ref={svgRef}
-          viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
-          preserveAspectRatio="xMidYMid slice"
-          className="absolute inset-0 w-full h-full touch-none select-none"
-          style={{ background: C.ocean }}
-          role="button"
-          tabIndex={0}
-          aria-label="Carte interactive — touchez pour placer votre punaise. Double-touchez pour zoomer."
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onClick={handleClick}
-          onKeyDown={handleKeyDown}
+    <section className="relative w-full min-h-screen bg-base-950 flex flex-col">
+      {/* ─── Hero text ─────────────────────────── */}
+      <div className="flex flex-col items-center justify-center pt-24 pb-6 px-4 z-10">
+        <motion.p
+          className="text-accent-400 text-xs tracking-[0.3em] uppercase mb-3 font-mono"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
         >
-          {/* Country polygons */}
-          {countries.map((f, i) => (
-            <path
-              key={f.id || i}
-              d={featureToPath(f.geometry)}
-              fill={C.land}
-              stroke={C.border}
-              strokeWidth={0.3}
-            />
-          ))}
+          Global Network
+        </motion.p>
+        <motion.h1
+          className="text-4xl font-display font-bold text-text-100 mb-3 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+        >
+          Tim Vignon
+        </motion.h1>
+        <motion.p
+          className="text-base text-text-300 font-light text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+        >
+          Engineering Student — Cybersecurity &bull; AI &bull; DevOps
+        </motion.p>
+      </div>
 
-          {/* Other visitors' pins */}
-          {markersArray
-            .filter((m) => m.uuid !== userUUID)
-            .map((m) => {
-              const [px, py] = project(m.lng, m.lat);
-              return (
-                <Pin2D
-                  key={m.uuid}
-                  x={px}
-                  y={py}
-                  color={C.pinOther}
-                  isNew={false}
-                  rippleRgb={C.ripple}
-                />
-              );
-            })}
-
-          {/* Own pin */}
-          {markersArray
-            .filter((m) => m.uuid === userUUID)
-            .map((m) => {
-              const [px, py] = project(m.lng, m.lat);
-              return (
-                <Pin2D
-                  key={m.uuid}
-                  x={px}
-                  y={py}
-                  color={C.pinOwn}
-                  isNew={newPin}
-                  rippleRgb={C.ripple}
-                />
-              );
-            })}
-        </svg>
-      )}
-
-      {/* ─── Overlay UI (pointer-events-none so taps pass through to map) ── */}
-      <div className="absolute inset-0 z-10 pointer-events-none flex flex-col">
-        {/* Hero text */}
-        <div className="flex flex-col items-center justify-center pt-24 pb-6 px-4">
-          <motion.p
-            className="text-accent-400 text-xs tracking-[0.3em] uppercase mb-3 font-mono drop-shadow-sm"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-          >
-            Global Network
-          </motion.p>
-          <motion.h1
-            className="text-4xl font-display font-bold text-text-100 mb-3 text-center drop-shadow-md"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-          >
-            Tim Vignon
-          </motion.h1>
-          <motion.p
-            className="text-base text-text-300 font-light text-center drop-shadow-sm"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-          >
-            Engineering Student — Cybersecurity &bull; AI &bull; DevOps
-          </motion.p>
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Empty state hint */}
+      {/* ─── Map area ──────────────────────────── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8 relative">
+        {/* Empty state */}
         <AnimatePresence>
           {!hasOwnMarker && !loading && (
             <motion.div
-              className="text-center mb-4 px-4"
-              initial={{ opacity: 0, y: 10 }}
+              className="absolute top-4 left-1/2 -translate-x-1/2 z-20 text-center"
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
+              exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
             >
-              <p className="text-text-300 text-sm font-mono drop-shadow-sm">
+              <p className="text-text-300 text-sm font-mono">
                 Votre point manque à l'appel !
               </p>
-              <p className="text-text-500 text-xs font-mono mt-1 drop-shadow-sm">
+              <p className="text-text-500 text-xs font-mono mt-1">
                 Touchez la carte pour commencer. Pincez pour zoomer.
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Bottom bar: visitor counter */}
+        {loading ? (
+          <motion.div
+            className="w-2 h-2 rounded-full bg-accent-400"
+            animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+        ) : (
+          <svg
+            ref={svgRef}
+            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+            className="w-full max-w-[600px] rounded-xl overflow-hidden touch-none select-none"
+            style={{
+              filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.08))',
+              background: C.ocean,
+              transition: viewBox.w === MAP_W ? 'none' : undefined,
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Carte interactive — touchez pour placer votre punaise. Double-touchez pour zoomer."
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+          >
+            {/* Country polygons */}
+            {countries.map((f, i) => (
+              <path
+                key={f.id || i}
+                d={featureToPath(f.geometry)}
+                fill={C.land}
+                stroke={C.border}
+                strokeWidth={0.3}
+              />
+            ))}
+
+            {/* Other visitors' pins */}
+            {markersArray
+              .filter((m) => m.uuid !== userUUID)
+              .map((m) => {
+                const [px, py] = project(m.lng, m.lat);
+                return (
+                  <Pin2D
+                    key={m.uuid}
+                    x={px}
+                    y={py}
+                    color={C.pinOther}
+                    isNew={false}
+                    rippleRgb={C.ripple}
+                  />
+                );
+              })}
+
+            {/* Own pin */}
+            {markersArray
+              .filter((m) => m.uuid === userUUID)
+              .map((m) => {
+                const [px, py] = project(m.lng, m.lat);
+                return (
+                  <Pin2D
+                    key={m.uuid}
+                    x={px}
+                    y={py}
+                    color={C.pinOwn}
+                    isNew={newPin}
+                    rippleRgb={C.ripple}
+                  />
+                );
+              })}
+          </svg>
+        )}
+
+        {/* Zoom reset button */}
+        <AnimatePresence>
+          {viewBox.w < MAP_W - 1 && (
+            <motion.button
+              className="absolute top-4 right-4 z-20 bg-base-900/70 backdrop-blur-sm border border-accent-400/20 text-text-300 rounded-lg px-3 py-1.5 text-xs font-mono"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={() => setViewBox({ x: 0, y: 0, w: MAP_W, h: MAP_H })}
+              aria-label="Réinitialiser le zoom"
+            >
+              ✕ Reset zoom
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* Visitor counter */}
         <motion.div
-          className="flex justify-center pb-8 px-4"
+          className="mt-4 z-10"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
         >
-          <div className="pointer-events-auto bg-base-900/60 backdrop-blur-sm border border-accent-400/15 px-4 py-2 rounded-lg flex items-center gap-3">
+          <div className="bg-base-900/60 backdrop-blur-sm border border-accent-400/15 px-4 py-2 rounded-lg flex items-center gap-3">
             <p className="font-mono text-xs text-text-500">
               <span className="text-lg font-bold text-accent-400">
                 {markerCount}
@@ -476,22 +489,6 @@ const MobileMapView = () => {
           </div>
         </motion.div>
       </div>
-
-      {/* ─── Zoom reset button ───────────────────── */}
-      <AnimatePresence>
-        {viewBox.w < MAP_W - 1 && (
-          <motion.button
-            className="absolute top-6 right-4 z-20 bg-base-900/70 backdrop-blur-sm border border-accent-400/20 text-text-300 rounded-lg px-3 py-1.5 text-xs font-mono"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={() => setViewBox({ x: 0, y: 0, w: MAP_W, h: MAP_H })}
-            aria-label="Réinitialiser le zoom"
-          >
-            ✕ Reset zoom
-          </motion.button>
-        )}
-      </AnimatePresence>
     </section>
   );
 };
