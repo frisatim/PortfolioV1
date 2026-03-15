@@ -2,7 +2,7 @@ import RevealOnScroll from '../animations/RevealOnScroll';
 import Section from '../common/Section';
 
 const metrics = [
-  { value: '3', label: 'Continents Studied' },
+  { value: '3', label: 'Countries Studied' },
   { value: '4+', label: 'Projects Built' },
   { value: '2nd', label: 'Innovation Bootcamp' },
 ];

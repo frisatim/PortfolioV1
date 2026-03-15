@@ -6,7 +6,7 @@ import Section from '../components/common/Section';
 import RevealOnScroll from '../components/animations/RevealOnScroll';
 
 // Replace with your Formspree form ID (https://formspree.io)
-const FORMSPREE_URL = 'https://formspree.io/f/xwpkpbge';
+const FORMSPREE_URL = 'https://formspree.io/f/mgonllnv';
 
 const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', message: '' });

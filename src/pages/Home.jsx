@@ -9,10 +9,7 @@ import Button from '../components/common/Button';
 import RevealOnScroll from '../components/animations/RevealOnScroll';
 import useResponsiveView from '../hooks/useResponsiveView';
 
-// Conditional lazy loading:
-// - Desktop (≥768px) → loads Three.js + react-globe.gl bundle
-// - Mobile  (<768px) → loads lightweight SVG map (zero 3D deps)
-// Each chunk is only downloaded when needed.
+// Lazy-load both views — mobile never downloads the heavy 3D bundle
 const WorldMapHero = lazy(() => import('../components/home/WorldMapHero'));
 const MobileMapView = lazy(() => import('../components/home/MobileMapView'));
 
@@ -50,7 +47,7 @@ const GlobeFallback = () => (
 );
 
 const Home = () => {
-  const view = useResponsiveView(768);
+  const view = useResponsiveView(); // 'globe' | 'map' — switches at 768px
 
   return (
     <PageTransition>

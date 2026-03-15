@@ -20,7 +20,7 @@ const About = () => (
             Engineering student specializing in Network and Communications at the University of Technology of Troyes (UTT), currently interning at the LIST3N research lab — working at the intersection of network analysis and artificial intelligence.
           </p>
           <p className="text-lg text-text-300 leading-relaxed mb-6">
-            My academic journey has taken me across three continents — studying in France, China (Shanghai University — Best ROI & Best Speech awards at Innovation Bootcamp), and South Korea (UNIST) — giving me a global perspective and adaptability.
+            My academic journey has taken me across three countries and two continents — studying in France, China (Shanghai University — Best ROI & Best Speech awards at Innovation Bootcamp), and South Korea (UNIST) — giving me a global perspective and adaptability.
           </p>
           <p className="text-lg text-text-300 leading-relaxed">
             Beyond academics, I tutor international students in French and pursue interests in volleyball, badminton, entrepreneurship, and astronomy.

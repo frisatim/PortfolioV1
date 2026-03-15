@@ -1,11 +1,11 @@
 export const workExperience = [
   {
-    year: "2025",
-    title: "Research Intern — Autonomous Driving AI",
+    year: "2026",
+    title: "Research Intern — Multi-Camera Surveillance Fusion",
     org: "LIST3N Lab, UTT",
     location: "Troyes, France",
     description:
-      "Developing a BEV (Bird's Eye View) fusion pipeline for autonomous driving perception. Benchmarking object detection models (YOLOv8, YOLOv11, RT-DETR) and multi-object tracking (ByteTrack). Research combining computer vision and network analysis.",
+      "Developing a multi-camera fusion system for industrial security surveillance. Benchmarking object detection models (YOLOv8, YOLOv11, RT-DETR) and multi-object tracking (ByteTrack). Research combining computer vision and network analysis.",
   },
   {
     year: "2024 — Present",
