@@ -33,3 +33,5 @@ Thumbs.db
 
 # Local agent tooling settings
 .claude/settings.local.json
+.vercel
+.env*.local

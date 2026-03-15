@@ -97,6 +97,11 @@ function Pin2D({ x, y, color, isNew, rippleRgb }) {
   );
 }
 
+// ── Zoom / pan constants ─────────────────────────
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 5;
+const DOUBLE_TAP_DELAY = 300; // ms
+
 // ── Main mobile map component ───────────────────
 const MobileMapView = () => {
   const svgRef = useRef(null);
@@ -105,6 +110,26 @@ const MobileMapView = () => {
   const [newPin, setNewPin] = useState(false);
   const { theme } = useTheme();
   const C = THEMES[theme];
+
+  // ── Zoom / pan state ────────────────────────────
+  const [viewBox, setViewBox] = useState({ x: 0, y: 0, w: MAP_W, h: MAP_H });
+  const gestureRef = useRef({
+    isPanning: false,
+    startDist: 0,
+    startViewBox: null,
+    startMid: null,
+    lastTap: 0,
+    startPt: null,
+    moved: false,
+  });
+
+  const clampViewBox = useCallback((vb) => {
+    const w = Math.max(MAP_W / MAX_ZOOM, Math.min(MAP_W, vb.w));
+    const h = (w / MAP_W) * MAP_H;
+    const x = Math.max(0, Math.min(MAP_W - w, vb.x));
+    const y = Math.max(0, Math.min(MAP_H - h, vb.y));
+    return { x, y, w, h };
+  }, []);
 
   const { markersArray, markerCount, isConnected, placeMarker, userUUID } =
     useGlobeSocket();
@@ -123,33 +148,170 @@ const MobileMapView = () => {
       .catch(() => setLoading(false));
   }, []);
 
-  // ── Handle tap on map ─────────────────────────
-  const handleTap = useCallback(
+  // ── Helper: client coords → SVG viewBox coords ──
+  const clientToSvg = useCallback((clientX, clientY) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }, []);
+
+  // ── Touch start: detect pinch vs single-finger ──
+  const handleTouchStart = useCallback(
     (e) => {
-      const svg = svgRef.current;
-      if (!svg) return;
+      const g = gestureRef.current;
+      g.moved = false;
 
-      // Get tap coordinates relative to SVG viewBox
-      const pt = svg.createSVGPoint();
-      const touch = e.changedTouches?.[0] || e;
-      pt.x = touch.clientX;
-      pt.y = touch.clientY;
-      const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+      if (e.touches.length === 2) {
+        // Pinch start
+        e.preventDefault();
+        const [a, b] = [e.touches[0], e.touches[1]];
+        g.startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        g.startViewBox = { ...viewBox };
+        const midClient = { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+        g.startMid = clientToSvg(midClient.x, midClient.y);
+        g.isPanning = false;
+      } else if (e.touches.length === 1) {
+        // Pan start (only when zoomed in)
+        g.startPt = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        g.startViewBox = { ...viewBox };
+        g.isPanning = true;
+      }
+    },
+    [viewBox, clientToSvg]
+  );
 
-      // Convert SVG coords back to lat/lng
+  // ── Touch move: pinch-zoom or pan ───────────────
+  const handleTouchMove = useCallback(
+    (e) => {
+      const g = gestureRef.current;
+
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const [a, b] = [e.touches[0], e.touches[1]];
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        if (!g.startDist || !g.startViewBox) return;
+
+        const scale = g.startDist / dist; // >1 = zoom out, <1 = zoom in
+        const newW = g.startViewBox.w * scale;
+        const newH = (newW / MAP_W) * MAP_H;
+
+        // Keep the midpoint of the pinch stationary
+        const mid = g.startMid;
+        if (!mid) return;
+        const newX = mid.x - (mid.x - g.startViewBox.x) * (newW / g.startViewBox.w);
+        const newY = mid.y - (mid.y - g.startViewBox.y) * (newH / g.startViewBox.h);
+
+        setViewBox(clampViewBox({ x: newX, y: newY, w: newW, h: newH }));
+        g.moved = true;
+      } else if (e.touches.length === 1 && g.isPanning && g.startPt) {
+        const isZoomed = viewBox.w < MAP_W - 1;
+        if (!isZoomed) return; // don't pan when fully zoomed out
+
+        const dx = e.touches[0].clientX - g.startPt.x;
+        const dy = e.touches[0].clientY - g.startPt.y;
+
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) g.moved = true;
+
+        // Convert pixel drag to SVG units
+        const svg = svgRef.current;
+        if (!svg) return;
+        const rect = svg.getBoundingClientRect();
+        const svgDx = (dx / rect.width) * viewBox.w;
+        const svgDy = (dy / rect.height) * viewBox.h;
+
+        setViewBox(
+          clampViewBox({
+            ...g.startViewBox,
+            x: g.startViewBox.x - svgDx,
+            y: g.startViewBox.y - svgDy,
+          })
+        );
+      }
+    },
+    [viewBox, clampViewBox]
+  );
+
+  // ── Touch end: place marker or double-tap zoom ──
+  const handleTouchEnd = useCallback(
+    (e) => {
+      const g = gestureRef.current;
+
+      // If it was a pinch or a drag, don't place a marker
+      if (g.moved || e.touches.length > 0) {
+        g.isPanning = false;
+        return;
+      }
+      g.isPanning = false;
+
+      const now = Date.now();
+      const touch = e.changedTouches?.[0];
+      if (!touch) return;
+
+      // Double-tap to zoom in / reset
+      if (now - g.lastTap < DOUBLE_TAP_DELAY) {
+        g.lastTap = 0;
+        if (viewBox.w < MAP_W - 1) {
+          // Already zoomed → reset
+          setViewBox({ x: 0, y: 0, w: MAP_W, h: MAP_H });
+        } else {
+          // Zoom in 2.5× centered on tap
+          const svgPt = clientToSvg(touch.clientX, touch.clientY);
+          if (!svgPt) return;
+          const newW = MAP_W / 2.5;
+          const newH = MAP_H / 2.5;
+          setViewBox(
+            clampViewBox({
+              x: svgPt.x - newW / 2,
+              y: svgPt.y - newH / 2,
+              w: newW,
+              h: newH,
+            })
+          );
+        }
+        return;
+      }
+      g.lastTap = now;
+
+      // Single tap — wait to confirm it's not a double-tap, then place marker
+      const clientX = touch.clientX;
+      const clientY = touch.clientY;
+      setTimeout(() => {
+        if (Date.now() - g.lastTap < DOUBLE_TAP_DELAY) return; // became a double-tap
+
+        const svgPt = clientToSvg(clientX, clientY);
+        if (!svgPt) return;
+        const lng = (svgPt.x / MAP_W) * 360 - 180;
+        const lat = 90 - (svgPt.y / MAP_H) * 180;
+        if (lat < -85 || lat > 85 || lng < -180 || lng > 180) return;
+
+        setNewPin(true);
+        placeMarker(lat, lng);
+        setTimeout(() => setNewPin(false), 700);
+      }, DOUBLE_TAP_DELAY + 50);
+    },
+    [viewBox, placeMarker, clientToSvg, clampViewBox]
+  );
+
+  // ── Click handler (desktop fallback) ────────────
+  const handleClick = useCallback(
+    (e) => {
+      // Skip on touch devices — handled by touch events
+      if (e.sourceCapability?.firesTouchEvents) return;
+
+      const svgPt = clientToSvg(e.clientX, e.clientY);
+      if (!svgPt) return;
       const lng = (svgPt.x / MAP_W) * 360 - 180;
       const lat = 90 - (svgPt.y / MAP_H) * 180;
-
-      // Clamp to valid range
       if (lat < -85 || lat > 85 || lng < -180 || lng > 180) return;
 
       setNewPin(true);
       placeMarker(lat, lng);
-
-      // Reset "new" flag after animation completes
       setTimeout(() => setNewPin(false), 700);
     },
-    [placeMarker]
+    [placeMarker, clientToSvg]
   );
 
   // ── Keyboard placement (center of map) ────────
@@ -211,7 +373,7 @@ const MobileMapView = () => {
                 Votre point manque à l'appel !
               </p>
               <p className="text-text-500 text-xs font-mono mt-1">
-                Touchez la carte pour commencer.
+                Touchez la carte pour commencer. Pincez pour zoomer.
               </p>
             </motion.div>
           )}
@@ -226,17 +388,20 @@ const MobileMapView = () => {
         ) : (
           <svg
             ref={svgRef}
-            viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
             className="w-full max-w-[600px] rounded-xl overflow-hidden touch-none select-none"
             style={{
               filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.08))',
               background: C.ocean,
+              transition: viewBox.w === MAP_W ? 'none' : undefined,
             }}
             role="button"
             tabIndex={0}
-            aria-label="Carte interactive — touchez pour placer votre punaise"
-            onTouchEnd={handleTap}
-            onClick={handleTap}
+            aria-label="Carte interactive — touchez pour placer votre punaise. Double-touchez pour zoomer."
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onClick={handleClick}
             onKeyDown={handleKeyDown}
           >
             {/* Country polygons */}
@@ -285,6 +450,22 @@ const MobileMapView = () => {
               })}
           </svg>
         )}
+
+        {/* Zoom reset button */}
+        <AnimatePresence>
+          {viewBox.w < MAP_W - 1 && (
+            <motion.button
+              className="absolute top-4 right-4 z-20 bg-base-900/70 backdrop-blur-sm border border-accent-400/20 text-text-300 rounded-lg px-3 py-1.5 text-xs font-mono"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={() => setViewBox({ x: 0, y: 0, w: MAP_W, h: MAP_H })}
+              aria-label="Réinitialiser le zoom"
+            >
+              ✕ Reset zoom
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* Visitor counter */}
         <motion.div
