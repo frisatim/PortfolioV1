@@ -4,6 +4,7 @@ import { AnimatePresence, MotionConfig } from 'framer-motion';
 import { ThemeProvider } from './context/ThemeContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
+import HomeWorkGlobe from './components/home/HomeWorkGlobe';
 
 // Lazy-load all pages for code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -35,25 +36,36 @@ function AnimatedRoutes() {
   );
 }
 
+function AppShell() {
+  const location = useLocation();
+  const isGlobeRoute = location.pathname === '/' || location.pathname === '/work';
+  const globeMode = location.pathname === '/work' ? 'work' : 'home';
+
+  return (
+    <div className="relative min-h-screen bg-base-950 text-text-300">
+      <div className="grain-overlay" />
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-accent-500 focus:text-text-100 focus:px-4 focus:py-2 focus:text-sm"
+      >
+        Skip to content
+      </a>
+      <Header />
+      <main id="main" className="relative z-0">
+        {isGlobeRoute && <HomeWorkGlobe mode={globeMode} />}
+        <AnimatedRoutes />
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
     <MotionConfig reducedMotion="user">
       <BrowserRouter>
-        <div className="min-h-screen bg-base-950 text-text-300">
-          <div className="grain-overlay" />
-          <a
-            href="#main"
-            className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-accent-500 focus:text-text-100 focus:px-4 focus:py-2 focus:text-sm"
-          >
-            Skip to content
-          </a>
-          <Header />
-          <main id="main">
-            <AnimatedRoutes />
-          </main>
-          <Footer />
-        </div>
+        <AppShell />
       </BrowserRouter>
     </MotionConfig>
     </ThemeProvider>
